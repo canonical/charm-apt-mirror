@@ -453,15 +453,14 @@ class TestCharm(BaseTest):
             ),
         )
 
-    @patch("os.walk")
-    def test_list_snapshots_action(self, os_walk):
-        def a2g(x):
-            return ([n, ["snapshot-{}".format(n)]] for n in x)
-
+    def test_list_snapshots_action(self):
         rand_n = random.randint(10, 100)
-        os_walk.return_value = a2g([rand_n])
         action_event = Mock()
         self.harness.charm._get_snapshot_name = Mock()
+        snapshot = Mock()
+        snapshot.name = "snapshot-{}".format(rand_n)
+        self.harness.charm._list_snapshots = Mock()
+        self.harness.charm._list_snapshots.return_value = [snapshot]
         self.harness.charm._on_list_snapshots_action(action_event)
         self.assertEqual(
             action_event.set_results.call_args,

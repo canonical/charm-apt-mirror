@@ -22,3 +22,17 @@ publish-snapshot:
       description: "Name of the snapshot to publish."
       type: string
       default: ""
+check-packages:
+  description: |
+    Check and report the packages that are no longer referenced in the existing
+    snapshots and the mirror path.
+clean-up-packages:
+  description: |
+    Remove the packages reported in the check-packages actions. You must
+    provide a parameter 'confirm=true' to actually perform the action.
+  params:
+    confirm:
+      description: "Confirm that you really want to perform this action."
+      type: boolean
+  required:
+    - confirm
