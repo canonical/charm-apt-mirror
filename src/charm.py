@@ -211,6 +211,9 @@ class AptMirrorCharm(CharmBase):
         logger.info("Syncing packages")
         try:
             start = time.time()
+            mirror_path = "{}/mirror".format(self._stored.config["base-path"])
+            for dists in Path(mirror_path).rglob("**/dists"):
+                shutil.rmtree(dists)
             subprocess.check_output(["apt-mirror"], stderr=subprocess.STDOUT)
             elapsed = time.time() - start
             logger.info("Sync complete, took {}s".format(elapsed))

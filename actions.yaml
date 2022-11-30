@@ -2,7 +2,9 @@
 # See LICENSE file for licensing details.
 #
 synchronize:
-  description: Synchronize the packages.
+  description: |
+    Pull the packages from the upstream based on the config "mirror-list", and
+    synchronize the package metadata (index files) with the upstream.
 create-snapshot:
   description: Create timestemped snapshot of current package metadata.
 list-snapshots:
