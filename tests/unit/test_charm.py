@@ -215,6 +215,8 @@ class TestCharm(BaseTest):
 
     @patch("subprocess.check_output")
     def test_synchronize_action(self, mock_subprocess_check_output):
+        self.harness.charm._check_packages = Mock()
+        self.harness.charm._check_packages.return_value = [], "0.0 bytes"
         self.harness.charm._on_synchronize_action(Mock())
         self.assertTrue(mock_subprocess_check_output.called)
         self.assertEqual(

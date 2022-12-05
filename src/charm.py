@@ -215,9 +215,18 @@ class AptMirrorCharm(CharmBase):
             for dists in Path(mirror_path).rglob("**/dists"):
                 shutil.rmtree(dists)
             subprocess.check_output(["apt-mirror"], stderr=subprocess.STDOUT)
+            packages_to_be_removed, freed_up_space = self._check_packages()
+            for package in packages_to_be_removed:
+                package.unlink()
             elapsed = time.time() - start
-            logger.info("Sync complete, took {}s".format(elapsed))
-            event.set_results({"time": elapsed})
+            logger.info(
+                "Sync complete, took {}s and freed up {}".format(
+                    elapsed, freed_up_space
+                )
+            )
+            event.set_results(
+                {"time": elapsed, "message": "Freed up {}".format(freed_up_space)}
+            )
         except subprocess.CalledProcessError as e:
             logger.info("Error {}".format(e.output))
             event.fail(e.output)

@@ -3,8 +3,10 @@
 #
 synchronize:
   description: |
-    Pull the packages from the upstream based on the config "mirror-list", and
-    synchronize the package metadata (index files) with the upstream.
+    Pull the .deb packages from the upstream based on the config "mirror-list",
+    and synchronize the package metadata (index files) with the upstream. In
+    addition, unreferenced packages will be automatically cleaned up without
+    confirmation; also see check-packages and clean-up-packages actions.
 create-snapshot:
   description: Create timestemped snapshot of current package metadata.
 list-snapshots:

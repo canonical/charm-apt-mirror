@@ -271,15 +271,9 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal mai
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
         await apt_mirror_unit.run_action("synchronize")
 
-        # Since landscape mirror is removed we expect there are extra
-        # unreferenced packages.
-        results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
-        count = int(results.get("count"))
-        assert count > 0
-
-        # Let's try to delete the unreferenced packages and check if there are
-        # still some unreferenced packages remain.
-        await helper.run_action_wait(apt_mirror_unit, "clean-up-packages", confirm=True)
+        # Since landscape mirror is removed, we expect there are no extra
+        # unreferenced packages because they will be removed during
+        # synchronization.
         results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
         count = int(results.get("count"))
         assert count == 0
@@ -317,10 +311,16 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal mai
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
         await apt_mirror_unit.run_action("synchronize")
 
-        # Even though we end up with only 1 mirror lists, but since we created
+        # Even though we end up with only 1 mirror list, but since we created
         # a snapshot before changing mirror list, we should still have
         # references to the packages in the snapshot, thus there should be no
         # packages to be removed.
+        results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
+        count = int(results.get("count"))
+        assert count == 0
+
+        # Let's try to delete the snapshot and check if there are
+        # still some unreferenced packages remain.
         results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
         count = int(results.get("count"))
         assert count == 0
@@ -371,10 +371,9 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal mai
     ):
         """Test removing outdated packages.
 
-        Test outdated packages when can be removed when a distro is upgraded,
-        and current index is not requiring them. Also, test the outdated
-        packages are not removed when the index of the old distro is kept in
-        the snapshot.
+        Test outdated packages are removed when a distro is upgraded, when no
+        indices are not requiring them. Also, test the outdated packages are
+        not removed when the index of the old distro is kept in the snapshot.
         """
         # Clean up
         await apt_mirror_unit.run("rm -rf {}/mirror/*".format(base_path))
@@ -397,10 +396,11 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal mai
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
         await apt_mirror_unit.run_action("synchronize")
 
-        # Make sure we find outdated packages.
+        # Make sure we don't find outdated packages because they should be
+        # removed during synchronization.
         results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
         count = int(results.get("count"))
-        assert count > 0
+        assert count == 0
 
         # Let's switch back to bionic and create a snapshot before switching to
         # focal.
