@@ -32,8 +32,10 @@ check-packages:
     snapshots and the mirror path.
 clean-up-packages:
   description: |
-    Remove the packages reported in the check-packages actions. You must
-    provide a parameter 'confirm=true' to actually perform the action.
+    Remove the packages reported in the check-packages action. You must provide
+    a parameter 'confirm=true' to actually perform the action; 'confirm=false'
+    will abort the action. If you are not sure, please use `check-packages`
+    action to view what pacakges can be removed.
   params:
     confirm:
       description: "Confirm that you really want to perform this action."
