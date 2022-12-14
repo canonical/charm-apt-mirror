@@ -182,30 +182,25 @@ class AptMirrorCharm(CharmBase):
         start = time.time()
         logger.info("Cleaning up unreferenced packages")
         packages_to_be_removed, freed_up_space = self._check_packages()
-        success = True
+        prefix_message = "Clean up completed without errors."
         for package in packages_to_be_removed:
             try:
                 package.unlink()
                 logger.info("Removed {}".format(package))
             except Exception as e:
                 logger.error(e)
-                success = False
+                prefix_message = (
+                    "Clean up completed with errors, "
+                    "please refer to juju's log for details."
+                )
         elapsed = time.time() - start
         logger.info("Clean up complete, took {}s".format(elapsed))
 
-        if not success:
-            event.set_results(
-                {
-                    "message": "Freed up {}".format(freed_up_space),
-                }
-            )
-        else:
-            event.set_results(
-                {
-                    "message": "Freed up {}".format(freed_up_space),
-                    "status": "Errors occured, please refer to juju's log for details.",
-                }
-            )
+        event.set_results(
+            {
+                "message": "{} Freed up {}".format(prefix_message, freed_up_space),
+            }
+        )
 
     def _on_synchronize_action(self, event):
         logger.info("Syncing packages")
