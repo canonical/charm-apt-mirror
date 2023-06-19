@@ -4,10 +4,12 @@
 import datetime
 import os
 import random
+import subprocess
 import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 from unittest.mock import MagicMock, Mock, call, mock_open, patch
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -241,15 +243,92 @@ deb fake-uri fake-distro\
             "{mirror-list}\n".format(**default_config).encode()
         )
 
-    @patch("subprocess.check_output")
-    def test_synchronize_action(self, mock_subprocess_check_output):
-        self.harness.charm._check_packages = Mock()
-        self.harness.charm._check_packages.return_value = [], "0.0 bytes"
-        self.harness.charm._on_synchronize_action(Mock())
-        self.assertTrue(mock_subprocess_check_output.called)
-        self.assertEqual(
-            mock_subprocess_check_output.call_args, call(["apt-mirror"], stderr=-2)
+    def test_get_mirrors_without_filter(self):
+        """Test git_mirrors without any filter applied."""
+        archive = "http://archive.ubuntu.com/ubuntu"
+        mirrors = [
+            f"deb {archive} jammy-security main restricted universe multiverse",
+            f"deb {archive} jammy-updates main restricted universe multiverse",
+            f"deb {archive} jammy-proposed main restricted universe multiverse",
+            f"deb {archive} jammy-backports main restricted universe multiverse",
+        ]
+        mirror_regex = ""
+        exp_mirrors = mirrors
+        self.harness.charm._stored.config["mirror-list"] = mirrors
+        filtered_mirrors = self.harness.charm._get_mirrors(mirror_regex)
+        self.assertListEqual(filtered_mirrors, exp_mirrors)
+
+    def test_get_mirrors_with_filter(self):
+        """Test git_mirrors without any filter applied."""
+        archive = "http://archive.ubuntu.com/ubuntu"
+        mirrors = [
+            f"deb {archive} jammy-security main restricted universe multiverse",
+            f"deb {archive} jammy-updates main restricted universe multiverse",
+            f"deb {archive} jammy-proposed main restricted universe multiverse",
+            f"deb {archive} jammy-backports main restricted universe multiverse",
+            f"deb {archive} focal-updates main restricted universe multiverse",
+        ]
+        self.harness.charm._stored.config["mirror-list"] = mirrors
+
+        # based regex contains part of distribution
+        mirror_regex = "updates"
+        exp_mirrors = [
+            f"deb {archive} jammy-updates main restricted universe multiverse",
+            f"deb {archive} focal-updates main restricted universe multiverse",
+        ]
+        filtered_mirrors = self.harness.charm._get_mirrors(mirror_regex)
+        self.assertListEqual(filtered_mirrors, exp_mirrors)
+
+        # based regex contains full source
+        mirror_regex = (
+            f"deb {archive} jammy-updates main restricted universe multiverse"
         )
+        exp_mirrors = [
+            f"deb {archive} jammy-updates main restricted universe multiverse"
+        ]
+        filtered_mirrors = self.harness.charm._get_mirrors(mirror_regex)
+        self.assertListEqual(filtered_mirrors, exp_mirrors)
+
+    def test_create_tmp_apt_mirror_config(self):
+        """Test helper function to create tmp config for apt-mirror."""
+        exp_path = "/tmp/test"
+        exp_mirrors = [1, 2, 3]
+        with mock.patch("charm.NamedTemporaryFile") as mock_tmp:
+            mock_tmp.return_value.__enter__.return_value = mock_file = MagicMock()
+            mock_file.name = exp_path
+            self.harness.charm._render_config = mock_render = MagicMock()
+            path = self.harness.charm._create_tmp_apt_mirror_config(*exp_mirrors)
+
+            mock_tmp.assert_called_once_with(delete=False)
+            mock_render.assert_called_once()
+            args, _ = mock_render.call_args
+            config, _ = args
+            assert config.get("mirror-list") == tuple(exp_mirrors)
+            assert path == Path(exp_path)
+
+    @patch("charm.clean_packages")
+    @patch("subprocess.check_output")
+    def test_synchronize_action(
+        self, mock_subprocess_check_output, mock_clean_packages
+    ):
+        event = MagicMock()
+        event.params.get.return_value = ""
+        exp_config = "/tmp/test"
+        exp_packages_to_clean = ["test"]
+        self.harness.charm._create_tmp_apt_mirror_config = MagicMock(
+            return_value=Path(exp_config)
+        )
+        self.harness.charm._check_packages = Mock()
+        self.harness.charm._check_packages.return_value = (
+            exp_packages_to_clean,
+            "0.0 bytes",
+        )
+
+        self.harness.charm._on_synchronize_action(event)
+        mock_subprocess_check_output.assert_called_once_with(
+            ["apt-mirror", exp_config], stderr=subprocess.STDOUT
+        )
+        mock_clean_packages.assert_called_once_with(exp_packages_to_clean)
 
     @patch("charm.open", new_callable=mock_open)
     @patch("os.walk")

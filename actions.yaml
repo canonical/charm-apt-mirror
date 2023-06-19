@@ -7,6 +7,14 @@ synchronize:
     and synchronize the package metadata (index files) with the upstream. In
     addition, unreferenced packages will be automatically cleaned up without
     confirmation; also see check-packages and clean-up-packages actions.
+  params:
+    source:
+      description: |
+        Run synchornize for a specific mirror. This parameter is used as a regular
+        expression to filter the list of mirrors provided by the "mirror-list"
+        configuration option, if no value is specified the unfiltered list is used.
+      type: string
+      default: ""
 create-snapshot:
   description: Create timestemped snapshot of current package metadata.
 list-snapshots:

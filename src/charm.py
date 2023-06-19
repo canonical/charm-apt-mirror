@@ -11,6 +11,8 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
+from typing import List, Optional
 from urllib.parse import urlparse
 
 from jinja2 import Environment, FileSystemLoader
@@ -227,29 +229,66 @@ class AptMirrorCharm(CharmBase):
         logger.info("Clean up complete, took %ds", elapsed)
         event.set_results({"message": f"{message} Freed up {freed_up_space}"})
 
+    def _get_mirrors(self, source: Optional[str] = None) -> List[str]:
+        """Get filtered mirrors."""
+        mirrors = list(self._stored.config.get("mirror-list", []))
+        logger.debug("found %d mirrors in charm configuration", len(mirrors))
+        if source:
+            reg_filter = re.compile(source)
+            mirrors = list(filter(reg_filter.search, mirrors))
+
+        return mirrors
+
+    def _create_tmp_apt_mirror_config(self, *mirrors) -> Path:
+        """Create tmp apt_mirror config."""
+        with NamedTemporaryFile(delete=False) as tmp_config:
+            tmp_path = Path(tmp_config.name)
+
+        config = dict(self._stored.config).copy()
+        config["mirror-list"] = mirrors
+        self._render_config(config, tmp_path)
+        return tmp_path
+
     def _on_synchronize_action(self, event):
+        """Perform synchronize action."""
         logger.info("Syncing packages")
+        start = time.time()
+        mirror_filter = event.params.get("source")
+        mirrors = self._get_mirrors(mirror_filter)
+
+        if not mirrors:
+            event.fail(
+                f"No mirror matches the filter `{mirror_filter}` or mirror-list config "
+                "options is empty. Please check mirror list with "
+                "`juju config apt-mirror mirror-list`"
+            )
+            return
+
         try:
-            start = time.time()
-            mirror_path = "{}/mirror".format(self._stored.config["base-path"])
-            for dists in Path(mirror_path).rglob("**/dists"):
-                shutil.rmtree(dists)
-            subprocess.check_output(["apt-mirror"], stderr=subprocess.STDOUT)
+            logger.info(
+                "running apt-mirror for:%s", os.linesep + os.linesep.join(mirrors)
+            )
+            tmp_path = self._create_tmp_apt_mirror_config(*mirrors)
+            subprocess.check_output(
+                ["apt-mirror", str(tmp_path)], stderr=subprocess.STDOUT
+            )
+        except subprocess.CalledProcessError as error:
+            logger.exception(error)
+            event.fail(error.output)
+        except ValueError as error:
+            logger.exception(error)
+            event.fail(f"action failed due invalid configuration: {error}")
+        else:
             packages_to_be_removed, freed_up_space = self._check_packages()
             clean_packages(packages_to_be_removed)
             elapsed = time.time() - start
             logger.info(
-                "Sync complete, took {}s and freed up {}".format(
-                    elapsed, freed_up_space
-                )
+                "Sync complete, took %ss and freed up %s", elapsed, freed_up_space
             )
             event.set_results(
                 {"time": elapsed, "message": "Freed up {}".format(freed_up_space)}
             )
-        except subprocess.CalledProcessError as e:
-            logger.info("Error {}".format(e.output))
-            event.fail(e.output)
-        self._update_status()
+            self._update_status()
 
     def _on_create_snapshot_action(self, event):
         snapshot_name = self._get_snapshot_name()
