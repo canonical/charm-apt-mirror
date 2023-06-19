@@ -3,7 +3,10 @@
 
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock
 from uuid import uuid4
+
+import pytest
 
 import utils
 
@@ -13,6 +16,23 @@ TEST_ARCHIVE_ROOT = (
 )
 TEST_INDEX = TEST_ARCHIVE_ROOT / "dists/focal/main/binary-amd64/Packages"
 TEST_POOL = TEST_ARCHIVE_ROOT / "pool"
+
+
+@pytest.mark.parametrize(
+    "packages, exp_result",
+    [
+        ([MagicMock(), MagicMock(), MagicMock()], True),
+        (
+            [MagicMock(), MagicMock(**{"unlink.side_effect": FileNotFoundError()})],
+            False,
+        ),
+    ],
+)
+def test_clean_packages(packages, exp_result):
+    """Test helper function to clean up packages."""
+    assert utils.clean_packages(packages) == exp_result
+    for package in packages:
+        package.unlink.assert_called_once()
 
 
 class TestUtils(unittest.TestCase):

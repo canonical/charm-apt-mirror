@@ -3,12 +3,12 @@
 
 import datetime
 import os
-import pathlib
 import random
 import tempfile
 import time
 import unittest
-from unittest.mock import Mock, call, mock_open, patch
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, call, mock_open, patch
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -40,7 +40,7 @@ class BaseTest(unittest.TestCase):
         self.harness.begin()
         # we need to have this to sync up the charm state: i.e. the
         # _stored.config
-        with patch("builtins.open", new_callable=mock_open):
+        with patch("charm.open", new_callable=mock_open):
             self.harness.update_config(get_default_charm_configs())
             self.harness.charm._on_config_changed(Mock())
 
@@ -55,7 +55,7 @@ class TestCharm(BaseTest):
             for n in c
         )
 
-    @patch("builtins.open", new_callable=mock_open)
+    @patch("charm.open", new_callable=mock_open)
     def test_bad_mirror_list(self, mock_open_call):
         bad_case_1 = """\
 deb
@@ -67,7 +67,7 @@ deb fake-uri
             with self.assertRaisesRegex(ValueError, "^An error .* option.$"):
                 self.harness.charm._validate_mirror_list(test_case)
 
-    @patch("builtins.open", new_callable=mock_open)
+    @patch("charm.open", new_callable=mock_open)
     def test_good_mirror_list(self, mock_open_call):
         good_mirror_list = """\
 deb fake-uri fake-distro fake-comp1
@@ -122,13 +122,17 @@ deb fake-uri fake-distro\
             ActiveStatus("Publishes: {}".format(snapshot_name)),
         )
 
-    @patch("builtins.open", new_callable=mock_open)
+    @patch("charm.open", new_callable=mock_open)
     def test_publish_relation_joined(self, mock_open_call):
         relation_id = self.harness.add_relation("publish", "webserver")
         self.harness.add_relation_unit(relation_id, "webserver/0")
         self.assertEqual(
             self.harness.get_relation_data(relation_id, self.harness._unit_name),
-            {"path": "{}/publish".format(self.harness.model.config["base-path"])},
+            {
+                "path": "{}/publish".format(
+                    self.harness.charm._stored.config["base-path"]
+                )
+            },
         )
 
     @patch("subprocess.check_output")
@@ -138,7 +142,7 @@ deb fake-uri fake-distro\
             ["apt", "install", "-y", "apt-mirror"]
         )
 
-    @patch("builtins.open", new_callable=mock_open)
+    @patch("charm.open", new_callable=mock_open)
     def test_cron_schedule_set(self, mock_open_call):
         schedule = str(uuid4())
         self.harness.update_config({"cron-schedule": schedule})
@@ -151,7 +155,7 @@ deb fake-uri fake-distro\
 
     @patch("os.unlink")
     @patch("os.path.exists")
-    @patch("builtins.open", new_callable=mock_open)
+    @patch("charm.open", new_callable=mock_open)
     def test_cron_schedule_remove(self, mock_open_call, os_path_exists, os_unlink):
         schedule = ""
         self.harness.update_config({"cron-schedule": schedule})
@@ -160,17 +164,13 @@ deb fake-uri fake-distro\
             "/etc/cron.d/{}".format(self.harness.charm.model.app.name)
         )
 
-    def test_apt_mirror_list(self):
-        with open("templates/mirror.list.j2") as f:
-            t = f.read()
-        mock_open_call = mock_open(read_data=t)
-        with patch("builtins.open", mock_open_call):
-            url = "http://archive.ubuntu.com/ubuntu"
-            opts = "bionic main restricted universe multiverse"
-            self.harness.update_config({"mirror-list": "deb {} {}".format(url, opts)})
-            default_config = self.harness.model.config
-        mock_open_call.assert_called_with("/etc/apt/mirror.list", "wb")
-        mock_open_call.return_value.write.assert_called_once_with(
+    @patch("charm.open", new_callable=mock_open)
+    def test_apt_mirror_list(self, mocked_open):
+        url = "http://archive.ubuntu.com/ubuntu"
+        opts = "bionic main restricted universe multiverse"
+        self.harness.update_config({"mirror-list": "deb {} {}".format(url, opts)})
+        mocked_open.assert_called_with(Path("/etc/apt/mirror.list"), "wb")
+        mocked_open().write.assert_called_once_with(
             "set base_path         {base-path}\n"
             "set mirror_path       $base_path/mirror\n"
             "set skel_path         $base_path/skel\n"
@@ -181,7 +181,7 @@ deb fake-uri fake-distro\
             "set nthreads          {threads}\n"
             "set limit_rate        100m\n"
             "set _tilde            0\n"
-            "{mirror-list}\n".format(**default_config).encode()
+            "{mirror-list}\n".format(**self.harness.model.config).encode()
         )
 
     @patch.dict(
@@ -193,10 +193,10 @@ deb fake-uri fake-distro\
         with open("templates/mirror.list.j2") as f:
             t = f.read()
         mock_open_call = mock_open(read_data=t)
-        with patch("builtins.open", mock_open_call):
+        with patch("charm.open", mock_open_call):
             self.harness.update_config({"use-proxy": True})
             default_config = self.harness.model.config
-        mock_open_call.assert_called_with("/etc/apt/mirror.list", "wb")
+        mock_open_call.assert_called_with(Path("/etc/apt/mirror.list"), "wb")
         mock_open_call.return_value.write.assert_called_once_with(
             "set base_path         {base-path}\n"
             "set mirror_path       $base_path/mirror\n"
@@ -223,10 +223,10 @@ deb fake-uri fake-distro\
         with open("templates/mirror.list.j2") as f:
             t = f.read()
         mock_open_call = mock_open(read_data=t)
-        with patch("builtins.open", mock_open_call):
+        with patch("charm.open", mock_open_call):
             self.harness.update_config({"use-proxy": False})
             default_config = self.harness.model.config
-        mock_open_call.assert_called_with("/etc/apt/mirror.list", "wb")
+        mock_open_call.assert_called_with(Path("/etc/apt/mirror.list"), "wb")
         mock_open_call.return_value.write.assert_called_once_with(
             "set base_path         {base-path}\n"
             "set mirror_path       $base_path/mirror\n"
@@ -251,23 +251,22 @@ deb fake-uri fake-distro\
             mock_subprocess_check_output.call_args, call(["apt-mirror"], stderr=-2)
         )
 
+    @patch("charm.open", new_callable=mock_open)
     @patch("os.walk")
     @patch("shutil.copytree")
     @patch("os.path.exists")
     @patch("os.symlink")
     @patch("os.makedirs")
     def test_create_snapshot_action(
-        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk
+        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk, _
     ):
-        with patch("builtins.open", new_callable=mock_open):
-            self.harness.update_config(
-                {
-                    "strip-mirror-name": False,
-                    "mirror-list": "deb http://{0}/a {0}".format(uuid4()),
-                }
-            )
+        self.harness.update_config(
+            {
+                "strip-mirror-name": False,
+                "mirror-list": "deb http://{0}/a {0}".format(uuid4()),
+            }
+        )
         default_config = self.harness.model.config
-
         rand_subdir = random.randint(10, 100)
         upstream_path = "{}".format(uuid4())
         mirror_url = default_config["mirror-list"].split()[1]
@@ -332,21 +331,21 @@ deb fake-uri fake-distro\
             ),
         )
 
+    @patch("charm.open", new_callable=mock_open)
     @patch("os.walk")
     @patch("shutil.copytree")
     @patch("os.path.exists")
     @patch("os.symlink")
     @patch("os.makedirs")
     def test_create_snapshot_action_strip_mirrors(
-        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk
+        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk, _
     ):
-        with patch("builtins.open", new_callable=mock_open):
-            self.harness.update_config(
-                {
-                    "strip-mirror-name": True,
-                    "mirror-list": "deb http://{0}/a {0}".format(uuid4()),
-                }
-            )
+        self.harness.update_config(
+            {
+                "strip-mirror-name": True,
+                "mirror-list": "deb http://{0}/a {0}".format(uuid4()),
+            }
+        )
         default_config = self.harness.model.config
 
         rand_subdir = random.randint(10, 100)
@@ -411,23 +410,23 @@ deb fake-uri fake-distro\
             ),
         )
 
+    @patch("charm.open", new_callable=mock_open)
     @patch("os.walk")
     @patch("shutil.copytree")
     @patch("os.path.exists")
     @patch("os.symlink")
     @patch("os.makedirs")
     def test_create_snapshot_action_strip_path(
-        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk
+        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk, _
     ):
         upstream_path = "{}".format(uuid4())
-        with patch("builtins.open", new_callable=mock_open):
-            self.harness.update_config(
-                {
-                    "strip-mirror-name": False,
-                    "mirror-list": "deb http://{0}/a {0}".format(uuid4()),
-                    "strip-mirror-path": "/{}".format(upstream_path),
-                }
-            )
+        self.harness.update_config(
+            {
+                "strip-mirror-name": False,
+                "mirror-list": "deb http://{0}/a {0}".format(uuid4()),
+                "strip-mirror-path": "/{}".format(upstream_path),
+            }
+        )
         default_config = self.harness.model.config
 
         rand_subdir = random.randint(10, 100)
@@ -541,7 +540,7 @@ deb fake-uri fake-distro\
     ):
         snapshot_name = uuid4()
         os_path_islink.return_value = True
-        base_path = self.harness.model.config["base-path"]
+        base_path = self.harness.charm._stored.config["base-path"]
         self.harness.charm._get_snapshot_name = Mock()
         self.harness.charm._on_publish_snapshot_action(
             Mock(params={"name": snapshot_name})
@@ -570,8 +569,8 @@ deb fake-uri fake-distro\
 
     def test_list_snapshots_not_empty(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
-            base_path = pathlib.Path(tmpdirname)
-            with patch("builtins.open", new_callable=mock_open):
+            base_path = Path(tmpdirname)
+            with patch("charm.open", new_callable=mock_open):
                 self.harness.update_config(
                     {
                         "base-path": str(base_path),
@@ -587,8 +586,8 @@ deb fake-uri fake-distro\
 
     def test_list_snapshots_empty(self):
         with tempfile.TemporaryDirectory() as tmpdirname:
-            base_path = pathlib.Path(tmpdirname)
-            with patch("builtins.open", new_callable=mock_open):
+            base_path = Path(tmpdirname)
+            with patch("charm.open", new_callable=mock_open):
                 self.harness.update_config(
                     {
                         "base-path": str(base_path),

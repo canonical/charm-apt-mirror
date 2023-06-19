@@ -3,11 +3,31 @@
 
 """A collection of utility functions."""
 
+import logging
 from bz2 import open as bopen
 from gzip import open as gopen
 from lzma import open as lopen
 from os import readlink
 from pathlib import Path
+from typing import Set
+
+logger = logging.getLogger(__name__)
+
+
+def clean_packages(packages: Set[Path]) -> bool:
+    """Clean up packages."""
+    logger.info("Cleaning up unreferenced packages")
+    result = True
+    for package in packages:
+        try:
+            package.unlink()
+            logger.info("Removed %s", package)
+        except FileNotFoundError as error:
+            logger.error("package %s could not be removed", package)
+            logger.exception(error)
+            result = False
+
+    return result
 
 
 def find_packages_by_indices(indices, base=""):

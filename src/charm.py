@@ -13,15 +13,24 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
-from utils import convert_bytes, find_packages_by_indices, locate_package_indices
+from utils import (
+    clean_packages,
+    convert_bytes,
+    find_packages_by_indices,
+    locate_package_indices,
+)
 
 logger = logging.getLogger(__name__)
+
+TEMPLATE_DIR = Path(__file__).parent.resolve() / "../templates"
+MIRROR_LIST_TEMPLATE = "mirror.list.j2"
+APT_MIRROR_CONFIG = Path("/etc/apt/mirror.list")
 
 
 class AptMirrorCharm(CharmBase):
@@ -141,7 +150,7 @@ class AptMirrorCharm(CharmBase):
                 "mirror-list",
             }
             if len(change_set & template_change_set) > 0:
-                self._render_config(self._stored.config)
+                self._render_config(self._stored.config, APT_MIRROR_CONFIG)
             if "cron-schedule" in change_set:
                 if self._stored.config["cron-schedule"] == "":
                     self._remove_cron_job()
@@ -204,25 +213,19 @@ class AptMirrorCharm(CharmBase):
         start = time.time()
         logger.info("Cleaning up unreferenced packages")
         packages_to_be_removed, freed_up_space = self._check_packages()
-        prefix_message = "Clean up completed without errors."
-        for package in packages_to_be_removed:
-            try:
-                package.unlink()
-                logger.info("Removed {}".format(package))
-            except Exception as e:
-                logger.error(e)
-                prefix_message = (
-                    "Clean up completed with errors, "
-                    "please refer to juju's log for details."
-                )
+        cleanup_result = clean_packages(packages_to_be_removed)
         elapsed = time.time() - start
-        logger.info("Clean up complete, took {}s".format(elapsed))
 
-        event.set_results(
-            {
-                "message": "{} Freed up {}".format(prefix_message, freed_up_space),
-            }
-        )
+        if cleanup_result is True:
+            message = "Clean up completed without errors."
+        else:
+            message = (
+                "Clean up completed with errors, please refer to juju's log for "
+                "details."
+            )
+
+        logger.info("Clean up complete, took %ds", elapsed)
+        event.set_results({"message": f"{message} Freed up {freed_up_space}"})
 
     def _on_synchronize_action(self, event):
         logger.info("Syncing packages")
@@ -233,8 +236,7 @@ class AptMirrorCharm(CharmBase):
                 shutil.rmtree(dists)
             subprocess.check_output(["apt-mirror"], stderr=subprocess.STDOUT)
             packages_to_be_removed, freed_up_space = self._check_packages()
-            for package in packages_to_be_removed:
-                package.unlink()
+            clean_packages(packages_to_be_removed)
             elapsed = time.time() - start
             logger.info(
                 "Sync complete, took {}s and freed up {}".format(
@@ -311,12 +313,14 @@ class AptMirrorCharm(CharmBase):
         event.set_results({name: publish_path})
         self._update_status()
 
-    def _render_config(self, config):
-        with open("templates/mirror.list.j2") as f:
-            t = Template(f.read())
-        with open("/etc/apt/mirror.list", "wb") as f:
-            b = t.render(opts=config).encode("UTF-8")
-            f.write(b)
+    def _render_config(self, config, apt_mirror_config: Path) -> None:
+        """Render apt_mirror config."""
+        env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+        template = env.get_template(MIRROR_LIST_TEMPLATE)
+        rendered_config = template.render(opts=config).encode("UTF-8")
+
+        with open(apt_mirror_config, "wb") as file:
+            file.write(rendered_config)
 
     def _setup_cron_job(self, config):
         with open("/etc/cron.d/{}".format(self.model.app.name), "w") as f:
