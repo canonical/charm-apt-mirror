@@ -4,6 +4,7 @@
 """A collection of utility functions."""
 
 import logging
+import shutil
 from bz2 import open as bopen
 from gzip import open as gopen
 from lzma import open as lopen
@@ -18,7 +19,7 @@ def clean_dists(path: Path) -> None:
     """Clean dists for mirror path."""
     mirror_path = path / "mirror"
     for dists in mirror_path.rglob("**/dists"):
-        dists.unlink()
+        shutil.rmtree(dists)
         logger.info("Removed %s", dists)
 
 
