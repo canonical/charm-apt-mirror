@@ -14,6 +14,14 @@ from typing import Set
 logger = logging.getLogger(__name__)
 
 
+def clean_dists(path: Path) -> None:
+    """Clean dists for mirror path."""
+    mirror_path = path / "mirror"
+    for dists in mirror_path.rglob("**/dists"):
+        dists.unlink()
+        logger.info("Removed %s", dists)
+
+
 def clean_packages(packages: Set[Path]) -> bool:
     """Clean up packages."""
     logger.info("Cleaning up unreferenced packages")

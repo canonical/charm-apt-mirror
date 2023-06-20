@@ -22,6 +22,7 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
 from utils import (
+    clean_dists,
     clean_packages,
     convert_bytes,
     find_packages_by_indices,
@@ -265,6 +266,7 @@ class AptMirrorCharm(CharmBase):
             return
 
         try:
+            clean_dists(Path(self._stored.config["base-path"]))
             logger.info(
                 "running apt-mirror for:%s", os.linesep + os.linesep.join(mirrors)
             )

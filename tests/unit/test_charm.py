@@ -306,10 +306,11 @@ deb fake-uri fake-distro\
             assert config.get("mirror-list") == tuple(exp_mirrors)
             assert path == Path(exp_path)
 
+    @patch("charm.clean_dists")
     @patch("charm.clean_packages")
     @patch("subprocess.check_output")
     def test_synchronize_action(
-        self, mock_subprocess_check_output, mock_clean_packages
+        self, mock_subprocess_check_output, mock_clean_packages, mock_clean_dists
     ):
         event = MagicMock()
         event.params.get.return_value = ""
@@ -325,6 +326,9 @@ deb fake-uri fake-distro\
         )
 
         self.harness.charm._on_synchronize_action(event)
+        mock_clean_dists.assert_called_once_with(
+            Path(self.harness.charm._stored.config["base-path"])
+        )
         mock_subprocess_check_output.assert_called_once_with(
             ["apt-mirror", exp_config], stderr=subprocess.STDOUT
         )

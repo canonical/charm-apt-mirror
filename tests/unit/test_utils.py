@@ -18,6 +18,19 @@ TEST_INDEX = TEST_ARCHIVE_ROOT / "dists/focal/main/binary-amd64/Packages"
 TEST_POOL = TEST_ARCHIVE_ROOT / "pool"
 
 
+def test_clean_dists():
+    """Test for helper function to clean all dists for mirror."""
+    tmp_path = MagicMock()
+    tmp_path.__truediv__.return_value = mirror_path = MagicMock()
+    dist = MagicMock()
+    mirror_path.rglob.return_value = [dist]
+
+    utils.clean_dists(tmp_path)
+    tmp_path.__truediv__.assert_called_once_with("mirror")
+    mirror_path.rglob.assert_called_once_with("**/dists")
+    dist.unlink.assert_called_once()
+
+
 @pytest.mark.parametrize(
     "packages, exp_result",
     [
