@@ -266,7 +266,10 @@ class AptMirrorCharm(CharmBase):
             return
 
         try:
-            clean_dists(Path(self._stored.config["base-path"]))
+            if mirror_filter is None:
+                # clean dists only if no filter was applied
+                clean_dists(Path(self._stored.config["base-path"]))
+
             logger.info(
                 "running apt-mirror for:%s", os.linesep + os.linesep.join(mirrors)
             )
@@ -288,7 +291,12 @@ class AptMirrorCharm(CharmBase):
                 "Sync complete, took %ss and freed up %s", elapsed, freed_up_space
             )
             event.set_results(
-                {"time": elapsed, "message": "Freed up {}".format(freed_up_space)}
+                {
+                    "time": elapsed,
+                    "message": "Freed up {} by cleaning {} packages".format(
+                        freed_up_space, len(packages_to_be_removed)
+                    ),
+                }
             )
             self._update_status()
 

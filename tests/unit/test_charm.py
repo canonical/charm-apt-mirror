@@ -309,16 +309,20 @@ deb fake-uri fake-distro\
     @patch("charm.clean_dists")
     @patch("charm.clean_packages")
     @patch("subprocess.check_output")
-    def test_synchronize_action(
+    def test_synchronize_action_without_source(
         self, mock_subprocess_check_output, mock_clean_packages, mock_clean_dists
     ):
         event = MagicMock()
-        event.params.get.return_value = ""
+        event.params.get.return_value = exp_source = None
+        exp_mirrors = ["deb test1", "deb test2"]
         exp_config = "/tmp/test"
         exp_packages_to_clean = ["test"]
-        self.harness.charm._create_tmp_apt_mirror_config = MagicMock(
-            return_value=Path(exp_config)
+        self.harness.charm._get_mirrors = mock_get_mirror = MagicMock(
+            return_value=exp_mirrors
         )
+        self.harness.charm._create_tmp_apt_mirror_config = (
+            mock_create_tmp_apt_mirror_config
+        ) = MagicMock(return_value=Path(exp_config))
         self.harness.charm._check_packages = Mock()
         self.harness.charm._check_packages.return_value = (
             exp_packages_to_clean,
@@ -326,9 +330,43 @@ deb fake-uri fake-distro\
         )
 
         self.harness.charm._on_synchronize_action(event)
+        mock_get_mirror.assert_called_once_with(exp_source)
         mock_clean_dists.assert_called_once_with(
             Path(self.harness.charm._stored.config["base-path"])
         )
+        mock_create_tmp_apt_mirror_config.assert_called_once_with(*exp_mirrors)
+        mock_subprocess_check_output.assert_called_once_with(
+            ["apt-mirror", exp_config], stderr=subprocess.STDOUT
+        )
+        mock_clean_packages.assert_called_once_with(exp_packages_to_clean)
+
+    @patch("charm.clean_dists")
+    @patch("charm.clean_packages")
+    @patch("subprocess.check_output")
+    def test_synchronize_action_with_source(
+        self, mock_subprocess_check_output, mock_clean_packages, mock_clean_dists
+    ):
+        event = MagicMock()
+        event.params.get.return_value = exp_source = "deb test"
+        exp_mirrors = ["deb test1", "deb test2"]
+        exp_config = "/tmp/test"
+        exp_packages_to_clean = ["test"]
+        self.harness.charm._get_mirrors = mock_get_mirror = MagicMock(
+            return_value=exp_mirrors
+        )
+        self.harness.charm._create_tmp_apt_mirror_config = (
+            mock_create_tmp_apt_mirror_config
+        ) = MagicMock(return_value=Path(exp_config))
+        self.harness.charm._check_packages = Mock()
+        self.harness.charm._check_packages.return_value = (
+            exp_packages_to_clean,
+            "0.0 bytes",
+        )
+
+        self.harness.charm._on_synchronize_action(event)
+        mock_get_mirror.assert_called_once_with(exp_source)
+        mock_clean_dists.assert_not_called()
+        mock_create_tmp_apt_mirror_config.assert_called_once_with(*exp_mirrors)
         mock_subprocess_check_output.assert_called_once_with(
             ["apt-mirror", exp_config], stderr=subprocess.STDOUT
         )
