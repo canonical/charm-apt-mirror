@@ -20,7 +20,7 @@ def clean_dists(path: Path) -> None:
     mirror_path = path / "mirror"
     for dists in mirror_path.rglob("**/dists"):
         shutil.rmtree(dists)
-        logger.info("Removed %s", dists)
+        logger.debug("Removed %s", dists)
 
 
 def clean_packages(packages: Set[Path]) -> bool:
@@ -30,7 +30,7 @@ def clean_packages(packages: Set[Path]) -> bool:
     for package in packages:
         try:
             package.unlink()
-            logger.info("Removed %s", package)
+            logger.debug("Removed %s", package)
         except FileNotFoundError as error:
             logger.error("package %s could not be removed", package)
             logger.exception(error)

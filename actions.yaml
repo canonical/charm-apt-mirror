@@ -10,9 +10,12 @@ synchronize:
   params:
     source:
       description: |
-        Run synchornize for a specific mirror. This parameter is used as a regular
+        Run synchronize for a specific mirror. This parameter is used as a regular
         expression to filter the list of mirrors provided by the "mirror-list"
-        configuration option, if no value is specified the unfiltered list is used.
+        configuration option. Leave unset to synchronize all mirros.
+        The following example starts synchronize for all mirrors starting with
+        "deb http://ppa.launchpad.net/".
+        `juju run-action apt-mirror/0 -- synchronize source="^deb http://ppa.launchpad.net/.*"`
       type: string
       default: ""
 create-snapshot:

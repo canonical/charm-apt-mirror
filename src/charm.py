@@ -228,7 +228,14 @@ class AptMirrorCharm(CharmBase):
             )
 
         logger.info("Clean up complete, took %ds", elapsed)
-        event.set_results({"message": f"{message} Freed up {freed_up_space}"})
+        event.set_results(
+            {
+                "time": elapsed,
+                "message": "{} Freed up {} by cleaning {} packages".format(
+                    message, freed_up_space, len(packages_to_be_removed)
+                ),
+            }
+        )
 
     def _get_mirrors(self, source: Optional[str] = None) -> List[str]:
         """Get filtered mirrors."""
