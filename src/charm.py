@@ -287,7 +287,7 @@ class AptMirrorCharm(CharmBase):
         except subprocess.CalledProcessError as error:
             logger.exception(error)
             event.fail(error.output)
-        except ValueError as error:
+        except Exception as error:
             logger.exception(error)
             event.fail(f"action failed due invalid configuration: {error}")
         else:
