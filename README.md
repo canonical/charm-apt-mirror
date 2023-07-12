@@ -118,7 +118,7 @@ unit-apt-mirror-0:
   timing:
     completed: 2023-07-10 10:07:13 +0000 UTC
     enqueued: 2023-07-10 10:07:06 +0000 UTC
-    started: 2023-07-10 10:07:08 +0000 UTC   
+    started: 2023-07-10 10:07:08 +0000 UTC
 ```
 
 ## Developing

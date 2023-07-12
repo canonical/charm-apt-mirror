@@ -17,7 +17,6 @@ synchronize:
         "deb http://ppa.launchpad.net/".
         `juju run-action apt-mirror/0 -- synchronize source="^deb http://ppa.launchpad.net/.*"`
       type: string
-      default: ""
 create-snapshot:
   description: Create timestemped snapshot of current package metadata.
 list-snapshots:
