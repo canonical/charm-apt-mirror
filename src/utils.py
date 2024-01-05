@@ -5,12 +5,8 @@
 
 import logging
 import shutil
-from bz2 import open as bopen
-from gzip import open as gopen
-from lzma import open as lopen
-from os import readlink
 from pathlib import Path
-from typing import Set
+from typing import List, Set
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +54,26 @@ def find_packages_by_indices(indices, base=""):
     return packages
 
 
+def _get_archive_root(pool: Path) -> Path:
+    """Get arive path from pool path."""
+    if pool.is_symlink():
+        return pool.readlink().parent.absolute()
+
+    return pool.parent.absolute()
+
+
+def _get_package_indices(dists: Path) -> List[Path]:
+    """Get package indeces."""
+    indices, parents = [], []
+    # filter files from same parent directory
+    for path in sorted(dists.glob("**/Packages*")):
+        if path.parent not in parents:
+            indices.append(path)
+            parents.append(path.parent)
+
+    return indices
+
+
 def locate_package_indices(path):
     """Return all locations of the index files.
 
@@ -74,16 +90,13 @@ def locate_package_indices(path):
     if not path.exists():
         raise FileNotFoundError("Invalid path: {}".format(path))
 
-    dists = list(path.glob("**/dists"))
-    pool = [d.parent / "pool" for d in dists]
-
     archive_roots = []
     package_indices = []
-    for p, d in zip(pool, dists):
-        archive_roots.append(
-            Path(readlink(p)).parent.absolute() if p.is_symlink() else p.parent.absolute()
-        )
-        package_indices.append([sorted(distro.glob("**/Packages*"))[0] for distro in d.glob("*")])
+    for dists in path.glob("**/dists"):
+        pool = dists.parent / "pool"
+        archive_roots.append(_get_archive_root(pool))
+        package_indices.append(_get_package_indices(dists))
+
     return zip(archive_roots, package_indices)
 
 
@@ -98,7 +111,7 @@ def convert_bytes(num):
 def _locate_packages_from_index(package_index, archive_root=""):
     """Return an unique set of path-to-packages found in the index file."""
     opener = _get_opener(package_index)
-    with opener(package_index, mode="r") as f:
+    with opener(package_index, mode="rt") as f:
         packages = {
             Path(archive_root, line.strip().replace("Filename: ", ""))
             for line in f
@@ -111,10 +124,16 @@ def _get_opener(path):
     """Return appropriate opener to open an index file."""
     extension = Path(path).suffix
     if extension == ".gz":
-        return gopen
+        import gzip
+
+        return gzip.open
     elif extension == ".bz2":
-        return bopen
+        import bz2
+
+        return bz2.open
     elif extension == ".lzma" or extension == ".xz":
-        return lopen
+        import lzma
+
+        return lzma.open
     else:
         return open
