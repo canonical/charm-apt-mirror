@@ -296,7 +296,8 @@ class AptMirrorCharm(CharmBase):
                 dst_root = snapshot_name_path / subtree
                 dst_pool = dst_root / "pool"
                 os.makedirs(dst_root, exist_ok=True)
-                os.symlink(src_pool, dst_pool)
+                # Note(rgildein): Copy directories and for all files in it creates hard link.
+                shutil.copytree(src_pool, dst_pool, copy_function=os.link)
                 logger.info("%s -> %s", src_pool, dst_pool)
             if "dists" in dirs:
                 src_root = Path(dirpath)

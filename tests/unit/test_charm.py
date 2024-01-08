@@ -355,10 +355,9 @@ deb fake-uri fake-distro\
     @patch("os.walk")
     @patch("shutil.copytree")
     @patch("os.path.exists")
-    @patch("os.symlink")
     @patch("os.makedirs")
     def test_create_snapshot_action(
-        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk, _
+        self, os_makedirs, os_path_exists, shutil_copytree, os_walk, _
     ):
         self.harness.update_config(
             {
@@ -406,17 +405,20 @@ deb fake-uri fake-distro\
                 call(exp_dst_root, exist_ok=True),
             ]
         )
-        os_symlink.assert_called_once_with(exp_src_root / "pool", exp_dst_root / "pool")
-        shutil_copytree.assert_called_once_with(exp_src_root / "dists", exp_dst_root / "dists")
+        shutil_copytree.assert_has_calls(
+            [
+                call(exp_src_root / "pool", exp_dst_root / "pool", copy_function=os.link),
+                call(exp_src_root / "dists", exp_dst_root / "dists"),
+            ]
+        )
 
     @patch("charm.open", new_callable=mock_open)
     @patch("os.walk")
     @patch("shutil.copytree")
     @patch("os.path.exists")
-    @patch("os.symlink")
     @patch("os.makedirs")
     def test_create_snapshot_action_strip_mirrors(
-        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk, _
+        self, os_makedirs, os_path_exists, shutil_copytree, os_walk, _
     ):
         self.harness.update_config(
             {
@@ -459,17 +461,20 @@ deb fake-uri fake-distro\
                 call(exp_dst_root, exist_ok=True),
             ]
         )
-        os_symlink.assert_called_once_with(exp_src_root / "pool", exp_dst_root / "pool")
-        shutil_copytree.assert_called_once_with(exp_src_root / "dists", exp_dst_root / "dists")
+        shutil_copytree.assert_has_calls(
+            [
+                call(exp_src_root / "pool", exp_dst_root / "pool", copy_function=os.link),
+                call(exp_src_root / "dists", exp_dst_root / "dists"),
+            ]
+        )
 
     @patch("charm.open", new_callable=mock_open)
     @patch("os.walk")
     @patch("shutil.copytree")
     @patch("os.path.exists")
-    @patch("os.symlink")
     @patch("os.makedirs")
     def test_create_snapshot_action_strip_path(
-        self, os_makedirs, os_symlink, os_path_exists, shutil_copytree, os_walk, _
+        self, os_makedirs, os_path_exists, shutil_copytree, os_walk, _
     ):
         upstream_path = "{}".format(uuid4())
         self.harness.update_config(
@@ -513,8 +518,12 @@ deb fake-uri fake-distro\
                 call(exp_dst_root, exist_ok=True),
             ]
         )
-        os_symlink.assert_called_once_with(exp_src_root / "pool", exp_dst_root / "pool")
-        shutil_copytree.assert_called_once_with(exp_src_root / "dists", exp_dst_root / "dists")
+        shutil_copytree.assert_has_calls(
+            [
+                call(exp_src_root / "pool", exp_dst_root / "pool", copy_function=os.link),
+                call(exp_src_root / "dists", exp_dst_root / "dists"),
+            ]
+        )
 
     def test_list_snapshots_action(self):
         snapshot_name = "snapshot-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
