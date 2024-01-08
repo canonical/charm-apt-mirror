@@ -55,7 +55,7 @@ def find_packages_by_indices(indices, base=""):
 
 
 def _get_archive_root(pool: Path) -> Path:
-    """Get arive path from pool path."""
+    """Get archive path from pool path."""
     if pool.is_symlink():
         return pool.readlink().parent.absolute()
 
@@ -63,7 +63,7 @@ def _get_archive_root(pool: Path) -> Path:
 
 
 def _get_package_indices(dists: Path) -> List[Path]:
-    """Get package indeces."""
+    """Get package indices."""
     indices, parents = [], []
     # filter files from same parent directory
     for path in sorted(dists.glob("**/Packages*")):
