@@ -49,6 +49,60 @@ def test_clean_packages(packages, exp_result):
         package.unlink.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    "paths, exp_indices",
+    [
+        (
+            [
+                "bionic-backports/universe/binary-amd64/Packages.xz",
+                "bionic-backports/universe/binary-amd64/Packages.gz",
+                "bionic-backports/universe/binary-amd64/Packages",
+                "bionic-backports/main/binary-amd64/Packages.xz",
+                "bionic-backports/main/binary-amd64/Packages.gz",
+                "bionic-backports/main/binary-amd64/Packages",
+                "bionic-backports/multiverse/binary-amd64/Packages.xz",
+                "bionic-backports/multiverse/binary-amd64/Packages.gz",
+                "bionic-backports/multiverse/binary-amd64/Packages",
+                "bionic-backports/restricted/binary-amd64/Packages.xz",
+                "bionic-backports/restricted/binary-amd64/Packages.gz",
+                "bionic-backports/restricted/binary-amd64/Packages",
+                "focal-backports/universe/binary-amd64/Packages.xz",
+                "focal-backports/universe/binary-amd64/Packages.gz",
+                "focal-backports/universe/binary-amd64/Packages",
+                "focal-backports/main/binary-amd64/Packages.xz",
+                "focal-backports/main/binary-amd64/Packages.gz",
+                "focal-backports/main/binary-amd64/Packages",
+                "focal-backports/multiverse/binary-amd64/Packages.xz",
+                "focal-backports/multiverse/binary-amd64/Packages.gz",
+                "focal-backports/multiverse/binary-amd64/Packages",
+                "focal-backports/restricted/binary-amd64/Packages.xz",
+                "focal-backports/restricted/binary-amd64/Packages.gz",
+                "focal-backports/restricted/binary-amd64/Packages",
+            ],
+            [
+                "bionic-backports/main/binary-amd64/Packages",
+                "bionic-backports/multiverse/binary-amd64/Packages",
+                "bionic-backports/restricted/binary-amd64/Packages",
+                "bionic-backports/universe/binary-amd64/Packages",
+                "focal-backports/main/binary-amd64/Packages",
+                "focal-backports/multiverse/binary-amd64/Packages",
+                "focal-backports/restricted/binary-amd64/Packages",
+                "focal-backports/universe/binary-amd64/Packages",
+            ],
+        )
+    ],
+)
+def test_get_package_indices(tmp_path, paths, exp_indices):
+    """Test helper function to obtain package indices from dists directory."""
+    dists = tmp_path / "dists"
+    for path in paths:
+        _path = dists / path
+        _path.mkdir(parents=True, exist_ok=True)
+        _path.touch()
+
+    assert utils._get_package_indices(dists) == [dists / indice for indice in exp_indices]
+
+
 class TestUtils(unittest.TestCase):
     def test_find_packages_by_indices(self):
         """Test find_packages_by_indices on a sample mirror path."""
