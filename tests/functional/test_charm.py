@@ -337,28 +337,15 @@ deb http://ppa.launchpad.net/landscape/19.10/ubuntu bionic main\
         # Create a snapshot at this point.
         await apt_mirror_unit.run_action("create-snapshot")
 
-        # End up with 1 mirror lists.
+        # End up with 1 mirror lists and check that some packages were removed.
         mirror_list = """\
 deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal main
 """
         await apt_mirror_app.set_config({"mirror-list": mirror_list})
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
-        await apt_mirror_unit.run_action("synchronize")
-
-        # Even though we end up with only 1 mirror list, but since we created
-        # a snapshot before changing mirror list, we should still have
-        # references to the packages in the snapshot, thus there should be no
-        # packages to be removed.
-        results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
-        count = int(results.get("count"))
-        assert count == 0
-
-        # Let's try to delete the snapshot and check if there are
-        # still some unreferenced packages remain.
-        await apt_mirror_unit.run("rm -rf {}/snapshot-*".format(base_path))
-        results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
-        count = int(results.get("count"))
-        assert count > 0
+        results = await helper.run_action_wait("synchronize")
+        _, changed_packages = re.findall(r"-?\d+\.?\d*", results.get("message"))
+        assert changed_packages > 0
 
     async def test_outdated_packages_version_changed(
         self, ops_test, apt_mirror_app, apt_mirror_unit, base_path, helper
@@ -407,8 +394,10 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal mai
         """Test removing outdated packages.
 
         Test outdated packages are removed when a distro is upgraded, when no
-        indices are not requiring them. Also, test the outdated packages are
-        not removed when the index of the old distro is kept in the snapshot.
+        indices are not requiring them.
+
+        The `synchronized` action will automatically cleaned up all outdated packages,
+        so the check-packages action should return empty list always.
         """
         # Clean up
         await apt_mirror_unit.run("rm -rf {}/mirror/*".format(base_path))
@@ -417,50 +406,26 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal mai
 
         # Start with a test mirror
         mirror_list = """\
-deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu bionic main
-"""
-        await apt_mirror_app.set_config({"mirror-list": mirror_list})
-        await ops_test.model.wait_for_idle(apps=["apt-mirror"])
-        await apt_mirror_unit.run_action("synchronize")
-
-        # Upgrade the distro to focal
-        mirror_list = """\
 deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal main
 """
         await apt_mirror_app.set_config({"mirror-list": mirror_list})
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
-        await apt_mirror_unit.run_action("synchronize")
-
-        # Make sure we don't find outdated packages because they should be
-        # removed during synchronization.
-        results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
-        count = int(results.get("count"))
-        assert count == 0
-
-        # Let's switch back to bionic and create a snapshot before switching to
-        # focal.
-        mirror_list = """\
-deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu bionic main
-"""
-        await apt_mirror_app.set_config({"mirror-list": mirror_list})
-        await ops_test.model.wait_for_idle(apps=["apt-mirror"])
-        await apt_mirror_unit.run_action("synchronize")
+        results = await helper.run_action_wait("synchronize")
+        assert results.get("message") == "Freed up 0.0 bytes by cleaning 0 packages"
         await helper.run_action_wait(apt_mirror_unit, "create-snapshot")
+
+        # Upgrade the distro to jammy
         mirror_list = """\
-deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal main
+deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu jammy main
 """
         await apt_mirror_app.set_config({"mirror-list": mirror_list})
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
-        await apt_mirror_unit.run_action("synchronize")
+        results = await helper.run_action_wait("synchronize")
+        _, changed_packages = re.findall(r"-?\d+\.?\d*", results.get("message"))
+        assert changed_packages > 0
 
-        # This time we should not find any "outdated" packages because they are
-        # still required in the snapshot.
+        # The `synchronize` action should clean up also the mirror, so the
+        # `check-packages` action should not find any package to clean up.
         results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
         count = int(results.get("count"))
         assert count == 0
-
-        # Remove the snapshot, and we should find the "outdated" packages
-        await apt_mirror_unit.run("rm -rf {}/snapshot-*".format(base_path))
-        results = await helper.run_action_wait(apt_mirror_unit, "check-packages")
-        count = int(results.get("count"))
-        assert count > 0

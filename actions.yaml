@@ -38,14 +38,18 @@ publish-snapshot:
       default: ""
 check-packages:
   description: |
-    Check and report the packages that are no longer referenced in the existing
+    DEPRECATED: Check and report the packages that are no longer referenced in the existing
     snapshots and the mirror path.
+    # Note(rgildein): The synchronize action is already cleaning up outed packages from
+    mirror path and snapshot are using hard links, so this action should always return empty list.
 clean-up-packages:
   description: |
-    Remove the packages reported in the check-packages action. You must provide
+    DEPRECATED: Remove the packages reported in the check-packages action. You must provide
     a parameter 'confirm=true' to actually perform the action; 'confirm=false'
     will abort the action. If you are not sure, please use `check-packages`
     action to view what pacakges can be removed.
+    # Note(rgildein): The synchronize action is already cleaning up outed packages from
+    mirror path and snapshot are using hard links, so this action should not remove anything.
   params:
     confirm:
       description: "Confirm that you really want to perform this action."
