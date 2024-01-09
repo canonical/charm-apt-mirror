@@ -208,7 +208,7 @@ class TestCharm:
         url = "ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu"
         mirror_list = """\
 deb https://{0} focal main
-deb https://{0} jammy main\
+deb https://{0} bionic main\
 """.format(
             url
         )
@@ -237,7 +237,7 @@ deb https://{0} jammy main\
         url = "ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu"
         mirror_list = """\
 deb https://{0} focal main
-deb https://{0} jammy main\
+deb https://{0} bionic main\
 """.format(
             url
         )
@@ -261,7 +261,7 @@ deb https://{0} jammy main\
         # Note these can be changed if you changed the test url and mirror_list
         test_apts = """\
 deb http://{0}/apt-mirror/{1} focal main
-deb http://{0}/apt-mirror/{1} jammy main\
+deb http://{0}/apt-mirror/{1} bionic main\
 """.format(
             nginx_public_ip, url
         )
@@ -291,7 +291,7 @@ deb http://{0}/apt-mirror/{1} jammy main\
         # Start with 2 mirror lists.
         mirror_list = """\
 deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu jammy main
-deb http://ppa.launchpad.net/landscape/21.10/ubuntu focal main\
+deb http://ppa.launchpad.net/landscape/self-hosted-23.10/ubuntu jammy main\
 """
         await apt_mirror_app.set_config({"mirror-list": mirror_list})
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
@@ -328,7 +328,7 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu jammy mai
         # Start with 2 mirror lists.
         mirror_list = """\
 deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal main
-deb http://ppa.launchpad.net/landscape/19.10/ubuntu focal main\
+deb http://ppa.launchpad.net/landscape/self-hosted-23.10/ubuntu jammy main\
 """
         await apt_mirror_app.set_config({"mirror-list": mirror_list})
         await ops_test.model.wait_for_idle(apps=["apt-mirror"])
@@ -438,7 +438,7 @@ deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu jammy mai
         assert count == 0
 
         # Let's switch back to Focal and create a snapshot before switching to
-        # focal.
+        # Jammy.
         mirror_list = """\
 deb https://ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu focal main
 """
