@@ -57,7 +57,9 @@ def find_packages_by_indices(indices, base=""):
 def _get_archive_root(pool: Path) -> Path:
     """Get archive path from pool path."""
     if pool.is_symlink():
-        return pool.readlink().parent.absolute()
+        # Note(rgildein): using pool.resolve instead of pool.readlink, since readlink was
+        # introduced in Python 3.9, we know that path exists, so it's safe
+        return pool.resolve().parent.absolute()
 
     return pool.parent.absolute()
 
