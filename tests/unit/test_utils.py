@@ -100,7 +100,27 @@ def test_get_package_indices(tmp_path, paths, exp_indices):
         _path.mkdir(parents=True, exist_ok=True)
         _path.touch()
 
-    assert utils._get_package_indices(dists) == [dists / indice for indice in exp_indices]
+    assert utils._get_package_indices(dists) == [dists / index for index in exp_indices]
+
+
+def test_get_archive_root_symlink():
+    """Test helper function to get root for pool."""
+    mock_path = MagicMock(spec_set=Path)
+    pool = mock_path("/a/b/c")
+    pool.is_symlink.return_value = True
+
+    archive_root = utils._get_archive_root(pool)
+    assert archive_root == pool.resolve.return_value.parent.absolute.return_value
+
+
+def test_get_archive_root():
+    """Test helper function to get root for pool."""
+    mock_path = MagicMock(spec_set=Path)
+    pool = mock_path("/a/b/c")
+    pool.is_symlink.return_value = False
+
+    archive_root = utils._get_archive_root(pool)
+    assert archive_root == pool.parent.absolute.return_value
 
 
 class TestUtils(unittest.TestCase):
