@@ -301,9 +301,9 @@ deb fake-uri fake-distro\
         exp_config = "/tmp/test"
         exp_packages_to_clean = ["test"]
         self.harness.charm._get_mirrors = mock_get_mirror = MagicMock(return_value=exp_mirrors)
-        self.harness.charm._create_tmp_apt_mirror_config = (
-            mock_create_tmp_apt_mirror_config
-        ) = MagicMock(return_value=Path(exp_config))
+        self.harness.charm._create_tmp_apt_mirror_config = mock_create_tmp_apt_mirror_config = (
+            MagicMock(return_value=Path(exp_config))
+        )
         self.harness.charm._check_packages = Mock()
         self.harness.charm._check_packages.return_value = (
             exp_packages_to_clean,
@@ -333,9 +333,9 @@ deb fake-uri fake-distro\
         exp_config = "/tmp/test"
         exp_packages_to_clean = ["test"]
         self.harness.charm._get_mirrors = mock_get_mirror = MagicMock(return_value=exp_mirrors)
-        self.harness.charm._create_tmp_apt_mirror_config = (
-            mock_create_tmp_apt_mirror_config
-        ) = MagicMock(return_value=Path(exp_config))
+        self.harness.charm._create_tmp_apt_mirror_config = mock_create_tmp_apt_mirror_config = (
+            MagicMock(return_value=Path(exp_config))
+        )
         self.harness.charm._check_packages = Mock()
         self.harness.charm._check_packages.return_value = (
             exp_packages_to_clean,
