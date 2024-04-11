@@ -36,17 +36,17 @@ def series(request):
     return request.config.getoption("--series")
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture
 def apt_mirror_app(ops_test):
     return ops_test.model.applications["apt-mirror"]
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture
 def apt_mirror_unit(apt_mirror_app):
     return apt_mirror_app.units[0]
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture
 def configs(apt_mirror_app):
     async def get_config_synced():
         return await apt_mirror_app.get_config()
@@ -59,3 +59,8 @@ def configs(apt_mirror_app):
 @pytest.fixture(scope="class")
 def helper():
     return Helper
+
+
+@pytest.fixture
+def base_path(configs):
+    return configs.get("base-path").get("value")
