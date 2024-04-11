@@ -21,21 +21,32 @@ jobs:
       python-version: ${{ matrix.python-version }}
       tox-version: "<4"
 
+
   func:
-    uses: canonical/bootstack-actions/.github/workflows/func.yaml@v3
+    name: Functional tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs: lint-unit
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - command: "FUNC_ARGS='--series focal' make functional"
-          - command: "FUNC_ARGS='--series jammy' make functional"
-    with:
-      command: ${{ matrix.command }}
-      juju-channel: "3.4/stable"
-      lxd-channel: "5.20/stable"  # tmp fix until https://github.com/canonical/charmcraft/issues/1640
-      nested-containers: false
-      provider: "lxd"
-      python-version: "3.10"
-      timeout-minutes: 120
-      tox-version: "<4"
+        series: ['focal', 'jammy']
+        juju-channel: ['3.4/stable']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Setup Juju ${{ matrix.juju-channel }} LXD environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          juju-channel: ${{ matrix.juju-channel }}
+          lxd-channel: "5.20/stable"  # tmp fix until https://github.com/canonical/charmcraft/issues/1640
+      - name: Show juju information
+        run: |
+          juju version
+          juju controllers | grep Version -A 1 | awk '{print $9}'
+      - name: Run functional test
+        run: FUNC_ARGS='--series ${{ matrix.series }}' make functional
