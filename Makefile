@@ -1,7 +1,3 @@
-# This is a template `Makefile` file for ops charms
-# This file is managed by bootstack-charms-spec and should not be modified
-# within individual charm repos. https://launchpad.net/bootstack-charms-spec
-
 PYTHON := /usr/bin/python3
 
 PROJECTPATH=$(dir $(realpath $(MAKEFILE_LIST)))
@@ -47,8 +43,6 @@ submodules-update:
 	@git submodule update --init --recursive --remote --merge
 
 clean:
-	@echo "Cleaning files"
-	@git clean -ffXd -e '!.idea' -e '!.vscode'
 	@echo "Cleaning existing build"
 	@rm -rf ${PROJECTPATH}/${CHARM_NAME}*.charm
 	@echo "Cleaning charmcraft"
@@ -77,8 +71,8 @@ unittests:
 	@tox -e unit -- ${UNIT_ARGS}
 
 functional:
-	@echo "Executing functional tests using built charm at ${PROJECTPATH}"
-	@CHARM_LOCATION=${PROJECTPATH} tox -e func -- ${FUNC_ARGS}
+	@echo "Executing functional tests with args: ${FUNC_ARGS}"
+	@tox -e func -- ${FUNC_ARGS}
 
 test: lint unittests functional
 	@echo "Tests completed for charm ${CHARM_NAME}."
