@@ -1,3 +1,8 @@
+# This file is centrally managed as a template file in https://github.com/canonical/solutions-engineering-automation
+# To update the file:
+# - Edit it in the canonical/solutions-engineering-automation repository.
+# - Open a PR with the changes.
+# - When the PR merges, the soleng-terraform bot will open a PR to the target repositories with the changes.
 name: Tests
 
 on:
@@ -33,9 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         runs-on: [[ubuntu-latest]]
-        test-func-args:
-          - "--series focal"
-          - "--series jammy"
+        test-command: ['FUNC_ARGS="--series focal" make functional', 'FUNC_ARGS="--series jammy" make functional']
     steps:
 
       - uses: actions/checkout@v4
@@ -67,7 +70,6 @@ jobs:
           fi
 
       - name: Run tests
-        run: "make functional"
+        run: ${{ matrix.test-command }}
         env:
           TEST_JUJU3: "1"  # https://github.com/openstack-charmers/zaza/pull/653
-          FUNC_ARGS: ${{ matrix.test-func-args }}
