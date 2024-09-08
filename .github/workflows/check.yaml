@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runs-on: [[ubuntu-latest]]
+        runs-on: [[ubuntu-22.04]]
         test-command: ['FUNC_ARGS="--series focal" make functional', 'FUNC_ARGS="--series jammy" make functional']
         juju-channel: ["3.4/stable"]
     steps:
