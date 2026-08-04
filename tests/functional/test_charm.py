@@ -199,12 +199,10 @@ async def test_bad_mirror_list_options(
 
     # Fix the mirror-list option
     url = "ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu"
-    mirror_list = """\
-deb https://{0} focal main
-deb https://{0} bionic main\
-""".format(
-        url
-    )
+    mirror_list = f"""\
+deb https://{url} focal main
+deb https://{url} bionic main\
+"""
     await apt_mirror_app.set_config({"mirror-list": mirror_list})
     await ops_test.model.wait_for_idle(apps=["apt-mirror"], status="blocked")
     app = ops_test.model.applications["apt-mirror"]
@@ -227,12 +225,10 @@ async def test_client_access(ops_test, apt_mirror_app, apt_mirror_unit, base_pat
     # Let's use bootstack public ppa for testing; it's very small compared
     # to ubuntu or other os's repos.
     url = "ppa.launchpadcontent.net/canonical-bootstack/public/ubuntu"
-    mirror_list = """\
-deb https://{0} focal main
-deb https://{0} bionic main\
-""".format(
-        url
-    )
+    mirror_list = f"""\
+deb https://{url} focal main
+deb https://{url} bionic main\
+"""
     await apt_mirror_app.set_config({"mirror-list": mirror_list})
     await ops_test.model.wait_for_idle(apps=["apt-mirror"])
 
@@ -251,12 +247,10 @@ deb https://{0} bionic main\
 
     client_unit = ops_test.model.applications["client"].units[0]
     # Note these can be changed if you changed the test url and mirror_list
-    test_apts = """\
-deb http://{0}/apt-mirror/{1} focal main
-deb http://{0}/apt-mirror/{1} bionic main\
-""".format(
-        nginx_public_ip, url
-    )
+    test_apts = f"""\
+deb http://{nginx_public_ip}/apt-mirror/{url} focal main
+deb http://{nginx_public_ip}/apt-mirror/{url} bionic main\
+"""
     await client_unit.run("echo '{}' > /etc/apt/sources.list".format(test_apts))
     # Add public key; this is only required for this particular mirror-list
     # option. The magic number: "4b9a81747a207542" is coming from
