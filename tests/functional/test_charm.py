@@ -11,8 +11,11 @@ log = logging.getLogger(__name__)
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test, series):
     """Test building apt-mirror charm and deploying it with a bundle file."""
-    charm = await ops_test.build_charm(".")
-    assert charm, "Charm was not built successfully."
+    charms = await ops_test.build_charm(".", return_all=True)
+    # charmcraft builds one charm per platform; pick the one matching the series.
+    base = {"focal": "20.04", "jammy": "22.04"}[series]
+    charm = next((c for c in charms if base in c.name), None)
+    assert charm, "Charm was not built successfully for series {}.".format(series)
 
     await ops_test.model.deploy(
         ops_test.render_bundle(
